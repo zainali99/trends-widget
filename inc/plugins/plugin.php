@@ -5,6 +5,15 @@ website: zainali.altervista.org
 forum: pakclan.com
 Software: MyBB
 
+
+
+
+CHANGELOGS:
+
+1.2:
+added support for MyBB GoMobile Theme
+trying to add support for google seo-urls option
+
 */
 
 
@@ -119,12 +128,12 @@ function trends_load(){
 function trends_info()
 {
 	return array(
-		"name"			=> "Trends Widget [ALPHA]",
-		"description"	=> "Show the most trending threads [ALPHA]",
-		"website"		=> "https://pakclan.com",
+		"name"			=> "Trends Widget [BETA]",
+		"description"	=> "Show the most trending threads",
+		"website"		=> "https://pakclan.com/showthread.php?tid=305",
 		"author"		=> "Zain Ali",
 		"authorsite"	=> "https://zainali.altervista.org",
-		"version"		=> "1.0",
+		"version"		=> "1.2",
 		"guid" 			=> "",
 		"codename"		=> "trends_widget",
 		"compatibility" => "18*"
@@ -137,7 +146,7 @@ function trends_activate(){
 
 $setting_group = array(
     'name' => 'trends_db_setting',
-    'title' => 'Trends [ALPHA] is LIVE !',
+    'title' => 'Trends [BETA] is LIVE !',
     'description' => 'trending threads, fresh data in one widget !',
     'disporder' => 5, // The order your setting group will display
     'isdefault' => 0
@@ -191,11 +200,23 @@ function trends(){
 global $mybb, $db, $trends_widget_template;
 	$query1 = $db->query("SELECT * FROM ".TABLE_PREFIX."threads WHERE views > 1 ORDER BY views DESC LIMIT 10");
 	$trends_widget_template = "<div id='trends_widget'><h2><img src='https://cdn2.iconfinder.com/data/icons/iconza/iconza_32x32_df086d/line_graph.png'>".$mybb->settings['wtitle']."</h2><ul>";
+
+	$html="";
+	if($mybb->settings['seourls'] == "yes" ){
+	$html = ".html";
+	$url = "http://".$_SERVER['HTTP_HOST']."/thread-";
+
+	}
+	else {
 	$url = "http://".$_SERVER['HTTP_HOST']."/showthread.php?tid=";
+	$html = "";
+	}	
+
+
 while($result2 = $db->fetch_array($query1)){
-    $trends_widget_template .= "<li><b>+".$result2["views"]."</b> - <a href='$url".$result2["tid"]."'>".$result2["subject"]."</a></li>";
+    $trends_widget_template .= "<li><b>+".$result2["views"]."</b> - <a href='$url".$result2["tid"]."$html'>".$result2["subject"]."</a></li>";
 }
-$trends_widget_template .="</ul></div><style>#trends_widget li{float:none;display:block}#trends_widget ul{position:unset}#trends_widget{width:300px;margin:1% auto;max-width:100%;min-height:150px;background-color:#fff}</style>";
+$trends_widget_template .="</ul></div><style>#trends_widget li a {all: unset;color: #333;text-decoration: underline;}#trends_widget li{float:none;display:block}#trends_widget ul{position:unset}#trends_widget{width:300px;margin:1% auto;max-width:100%;min-height:150px;background-color:#fff}</style>";
  return $trends_widget_template;
 }
 

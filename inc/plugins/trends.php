@@ -12,8 +12,8 @@ CHANGELOGS:
 
 1.2:
 added support for MyBB GoMobile Theme
-trying to add support for google seo-urls option
-
+added support fo google seo urls
+fixed some bugs
 */
 
 
@@ -48,12 +48,19 @@ function trends_action_hand(&$action)
 
 function trends_link(&$sub_menu)
 {
+	global $mybb, $db;
+$query2 = $db->query("SELECT * FROM ".TABLE_PREFIX."settinggroups WHERE name ='trends_db_setting'");
+		$result3 = $db->fetch_array($query2);
+		$token_id = $result3["gid"];
+
+
+
 	end($sub_menu);
 	$key = (key($sub_menu)) + 10;
 	$sub_menu[$key] = array(
 		'id' => 'trends',
 		'title' => 'Trending Widget',
-		'link' => 'index.php?module=config-trends'
+		'link' => 'index.php?module=config-settings&action=change&gid='.$token_id.''
 	);
 }
 
@@ -73,17 +80,15 @@ function trends_load(){
 		build link of setting dynamically, ignore the code of this plugin
 		im just having fun and testing plugin development :D
 		*/
-		$query2 = $db->query("SELECT * FROM ".TABLE_PREFIX."settinggroups WHERE name ='trends_db_setting'");
-		$result3 = $db->fetch_array($query2);
-		$token_id = $result3["gid"];
+		
 	
 
 	// Create Admin Tabs
 	$tabs['trends'] = array
 		(
 			'title' => 'test',
-			'link' =>'index.php?module=config/trends',
-			'description'=> 'Sorry, this is alpha version of trends widget, so click here for setting of the plugin: <a href="index.php?module=config-settings&action=change&gid='.$token_id.'">Go To Trends Setting !</a><hr>Alpha Version - 1.0</a>'
+			'link' =>'#',
+			'description'=> '404 page not found...'
 		);
 	
 
@@ -165,10 +170,16 @@ $setting_array = array(
         'title' => 'Trending Widget Title',
         'description' => 'Enter the title you want:',
         'optionscode' => 'text',
-        'value' => 'trending', // Default
+        'value' => 'Trending...', // Default
         'disporder' => 1
     ),
-   
+   'wdev' => array(
+        'title' => 'Enable Dev Mode?',
+        'description' => 'Do you want the development mode turned on? only for developers',
+        'optionscode' => 'yesno',
+        'value' => 0,
+        'disporder' => 2
+    ),
 );
 
 foreach($setting_array as $name => $setting)
@@ -189,7 +200,7 @@ rebuild_settings();
 function trends_deactivate(){
 global $db;
 
-$db->delete_query('settings', "name IN ('wtitle')");
+$db->delete_query('settings', "name IN ('wtitle','wdev')");
 $db->delete_query('settinggroups', "name = 'trends_db_setting'");
 
 // Don't forget this
@@ -198,8 +209,9 @@ rebuild_settings();
 
 function trends(){
 global $mybb, $db, $trends_widget_template;
+ 
 	$query1 = $db->query("SELECT * FROM ".TABLE_PREFIX."threads WHERE views > 1 ORDER BY views DESC LIMIT 10");
-	$trends_widget_template = "<div id='trends_widget'><h2><img src='https://cdn2.iconfinder.com/data/icons/iconza/iconza_32x32_df086d/line_graph.png'>".$mybb->settings['wtitle']."</h2><ul>";
+	$trends_widget_template = "<style>#trends_widget img {vertical-align:middle;width:32px} #trends_widget li a {all: unset;color: #333;text-decoration: underline;}#trends_widget li{float:none;display:block}#trends_widget ul{all:unset}#trends_widget{width:300px;margin:1% auto;max-width:100%;min-height:150px;background-color:#fff}</style><div id='trends_widget'><h2><img src='".$mybb->settings['bburl']."/images/trendswidget/logo.svg'>".$mybb->settings['wtitle']."</h2><ul>";
 
 	$html="";
 	if($mybb->settings['seourls'] == "yes" ){
@@ -208,16 +220,62 @@ global $mybb, $db, $trends_widget_template;
 
 	}
 	else {
-	$url = "http://".$_SERVER['HTTP_HOST']."/showthread.php?tid=";
+	$url = "http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']."showthread.php?tid=";
+	$url2 = str_replace(THIS_SCRIPT,"",$url);
 	$html = "";
 	}	
 
+	$DEVMODE_R=array();
+	$NODATA=false;
 
-while($result2 = $db->fetch_array($query1)){
-    $trends_widget_template .= "<li><b>+".$result2["views"]."</b> - <a href='$url".$result2["tid"]."$html'>".$result2["subject"]."</a></li>";
+
+
+
+if($db->num_rows($query1) <= 0 ){
+$NODATA=true;
+$trends_widget_template.="no data available</ul><hr>Also the Developer Data isn't available.</div>";
 }
-$trends_widget_template .="</ul></div><style>#trends_widget li a {all: unset;color: #333;text-decoration: underline;}#trends_widget li{float:none;display:block}#trends_widget ul{position:unset}#trends_widget{width:300px;margin:1% auto;max-width:100%;min-height:150px;background-color:#fff}</style>";
+
+
+else{
+while($result2 = $db->fetch_array($query1)){
+	$views = $result2["views"];
+	$tid = $result2["tid"];
+	$fid = $result2["fid"];
+	$subject = $result2["subject"];
+
+
+
+    $trends_widget_template .= "<li><b>+".$result2["views"]."</b> - <a href='$url2".$result2["tid"]."$html'>".$result2["subject"]."</a></li>";
+
+
+
+    $DEVMODE_R[] = $result2;
+
+}
+
+
+
+
+/*dev mode*/
+	if($mybb->settings["wdev"] == 1  ) {
+		//log some data
+		
+
+		$logdata="<script>var trendswidget_array = '".json_encode($DEVMODE_R)."';console.log(JSON.parse(trendswidget_array));</script>";
+		
+	}
+	/*dev mode*/
+	
+$trends_widget_template .="</ul></div>$logdata";
+
+
+
  return $trends_widget_template;
+
+}
+
+
 }
 
 

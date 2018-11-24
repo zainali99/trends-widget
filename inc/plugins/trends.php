@@ -4,16 +4,6 @@ Author: Zain Ali
 website: zainali.altervista.org
 forum: pakclan.com
 Software: MyBB
-
-
-
-
-CHANGELOGS:
-
-1.2:
-added support for MyBB GoMobile Theme
-added support fo google seo urls
-fixed some bugs
 */
 
 
@@ -24,6 +14,7 @@ $plugins->add_hook("global_start", "trends");
 $plugins->add_hook('admin_config_action_handler', 'trends_action_hand');
 $plugins->add_hook('admin_load','trends_load');
 $plugins->add_hook('admin_config_menu', 'trends_link');
+$plugins->add_hook('xmlhttp', 'trends_ajax');
 // Disallow direct access to this file for security reasons
 if(!defined("IN_MYBB"))
 {
@@ -31,7 +22,76 @@ if(!defined("IN_MYBB"))
 }
 
 
+function trends_ajax()
+{
+    global $mybb,$db,$charset;
 
+    if($mybb->get_input('action') == 'twsortbytoday' && $_GET['key'])
+    {
+        /*
+        header("Content-type: application/json; charset={$charset}");
+        $data = array('hello' => 'world');
+        echo json_encode($data);
+        exit;WHERE 
+		this month:
+        dateline >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE())-1 DAY))
+		today:
+		dateline >= UNIX_TIMESTAMP(CURDATE()) AND views > 1
+        */
+        $isvalid= verify_post_check($_GET['key']);
+
+        header("Content-type: application/json; charset={$charset}");
+$query = $db->query("SELECT tid,fid,views,subject,lastposter,dateline FROM ".TABLE_PREFIX."threads  WHERE dateline >= UNIX_TIMESTAMP(CURDATE()) AND views > 1 ORDER BY views DESC LIMIT 10");
+$data = array("siteInfo"=>array("code"=>$_GET['key'],"seourls"=>$mybb->settings['seourls'], "bburl"=>$mybb->settings['bburl']),"topics" => array());
+while($row = $db->fetch_array($query) ) {
+ 	$data["topics"][] = $row;
+}
+echo json_encode($data);
+exit;
+
+
+    }
+if($mybb->get_input('action') == 'twsortbymonth' && $_GET['key'])
+    {
+        /*
+        header("Content-type: application/json; charset={$charset}");
+        $data = array('hello' => 'world');
+        echo json_encode($data);
+        exit;WHERE 
+		this month:
+        dateline >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE())-1 DAY))
+		today:
+		dateline >= UNIX_TIMESTAMP(CURDATE()) AND views > 1
+        */
+        $isvalid= verify_post_check($_GET['key']);
+
+        header("Content-type: application/json; charset={$charset}");
+$query = $db->query("SELECT tid,fid,views,subject,lastposter,dateline FROM ".TABLE_PREFIX."threads  WHERE dateline >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE())-1 DAY)) AND views > 1 ORDER BY views DESC LIMIT 10");
+$data = array("siteInfo"=>array("code"=>$_GET['key'],"seourls"=>$mybb->settings['seourls'], "bburl"=>$mybb->settings['bburl']),"topics" => array());
+while($row = $db->fetch_array($query) ) {
+ 	$data["topics"][] = $row;
+}
+echo json_encode($data);
+exit;
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
 
 
 function trends_action_hand(&$action)
@@ -75,11 +135,7 @@ function trends_load(){
 
 	require_once MYBB_ADMIN_DIR."inc/class_form.php";
 
-		/*
-		https://HOST.COM/admin/index.php?module=config-settings&action=change&gid=
-		build link of setting dynamically, ignore the code of this plugin
-		im just having fun and testing plugin development :D
-		*/
+		
 		
 	
 
@@ -211,17 +267,17 @@ function trends(){
 global $mybb, $db, $trends_widget_template;
  
 	$query1 = $db->query("SELECT * FROM ".TABLE_PREFIX."threads WHERE views > 1 ORDER BY views DESC LIMIT 10");
-	$trends_widget_template = "<style>#trends_widget img {vertical-align:middle;width:32px} #trends_widget li a {all: unset;color: #333;text-decoration: underline;}#trends_widget li{float:none;display:block}#trends_widget ul{all:unset}#trends_widget{width:300px;margin:1% auto;max-width:100%;min-height:150px;background-color:#fff}</style><div id='trends_widget'><h2><img src='".$mybb->settings['bburl']."/images/trendswidget/logo.svg'>".$mybb->settings['wtitle']."</h2><ul>";
+	$trends_widget_template = "<style>#trends_widget img {vertical-align:middle;} #trends_widget li a {color: #333;text-decoration: underline;}#trends_widget li{float:none;display:block;border-bottom:1px solid #DDD}#trends_widget ul{height:300px;overflow-y:scroll;}#trends_widget{width:340px;margin:1% auto;max-width:100%;background-color:#fff}</style><div id='trends_widget'><h2><img src='".$mybb->settings['bburl']."/images/trendswidget/arrow.png' width='32px'>".$mybb->settings['wtitle']."</h2><p>sort by: <select onchange='TW_SORTBY(this.selectedIndex);'><option value='0'>views</option><option value='1'>today</option><option value='2'>month</option></select></p><ul id='trends_widget_list'>";
 
 	$html="";
 	if($mybb->settings['seourls'] == "yes" ){
 	$html = ".html";
-	$url = "http://".$_SERVER['HTTP_HOST']."/thread-";
+	$url = $mybb->settings['bburl']."/thread-";
 
 	}
 	else {
-	$url = "http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']."showthread.php?tid=";
-	$url2 = str_replace(THIS_SCRIPT,"",$url);
+	$url = $mybb->settings['bburl']."/showthread.php?tid=";
+	$url = str_replace(THIS_SCRIPT,"",$url);
 	$html = "";
 	}	
 
@@ -243,10 +299,11 @@ while($result2 = $db->fetch_array($query1)){
 	$tid = $result2["tid"];
 	$fid = $result2["fid"];
 	$subject = $result2["subject"];
+	$lastposter = $result2["lastposter"];
+	$thetime=date("d M Y",$result2["dateline"]);
 
 
-
-    $trends_widget_template .= "<li><b>+".$result2["views"]."</b> - <a href='$url2".$result2["tid"]."$html'>".$result2["subject"]."</a></li>";
+    $trends_widget_template .= "<li><a href='$url".$result2["tid"]."$html'>".$result2["subject"]."</a><p><span title='views'> <img src='".$mybb->settings['bburl']."/images/trendswidget/arrow.png' width='16px'/> $views</span>| latest: $lastposter |$thetime </p></li>";
 
 
 
@@ -262,12 +319,12 @@ while($result2 = $db->fetch_array($query1)){
 		//log some data
 		
 
-		$logdata="<script>var trendswidget_array = '".json_encode($DEVMODE_R)."';console.log(JSON.parse(trendswidget_array));</script>";
+		$logdata="<script type='text/javascript' src='".$mybb->settings['bburl']."/jscripts/trends_widget.js'></script><script>var trendswidget_array = '".json_encode($DEVMODE_R)."';console.log(JSON.parse(trendswidget_array));</script>";
 		
 	}
 	/*dev mode*/
 	
-$trends_widget_template .="</ul></div>$logdata";
+$trends_widget_template .="<hr>Created by: <a href='https://community.mybb.com/thread-220425.html'>Zain Ali - &copy; Trending Widget 2018</a></ul></div>$logdata<script type='text/javascript' src='".$mybb->settings['bburl']."/jscripts/trends_widget.js'></script>";
 
 
 

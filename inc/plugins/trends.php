@@ -42,10 +42,16 @@ function trends_ajax()
 
         header("Content-type: application/json; charset={$charset}");
 $query = $db->query("SELECT tid,fid,views,subject,lastposter,dateline FROM ".TABLE_PREFIX."threads  WHERE dateline >= UNIX_TIMESTAMP(CURDATE()) AND views > 1 ORDER BY views DESC LIMIT 10");
-$data = array("siteInfo"=>array("code"=>$_GET['key'],"seourls"=>$mybb->settings['seourls'], "bburl"=>$mybb->settings['bburl']),"topics" => array());
+$data = array("siteInfo"=>array("action"=>$mybb->get_input('action'),"code"=>$_GET['key'],"seourls"=>$mybb->settings['seourls'], "bburl"=>$mybb->settings['bburl']),"topics" => array());
+if($db->num_rows($query) == 0){
+	$data["topics"]["error_code"] = "no-topics";
+}
+else {
 while($row = $db->fetch_array($query) ) {
  	$data["topics"][] = $row;
 }
+}
+
 echo json_encode($data);
 exit;
 
@@ -62,12 +68,14 @@ if($mybb->get_input('action') == 'twsortbymonth' && $_GET['key'])
         dateline >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE())-1 DAY))
 		today:
 		dateline >= UNIX_TIMESTAMP(CURDATE()) AND views > 1
+		week:
+		dateline >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(),INTERVAL DAYOFWEEK(CURDATE())-1 DAY))
         */
         $isvalid= verify_post_check($_GET['key']);
 
         header("Content-type: application/json; charset={$charset}");
 $query = $db->query("SELECT tid,fid,views,subject,lastposter,dateline FROM ".TABLE_PREFIX."threads  WHERE dateline >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE())-1 DAY)) AND views > 1 ORDER BY views DESC LIMIT 10");
-$data = array("siteInfo"=>array("code"=>$_GET['key'],"seourls"=>$mybb->settings['seourls'], "bburl"=>$mybb->settings['bburl']),"topics" => array());
+$data = array("siteInfo"=>array("action"=>$mybb->get_input('action'),"code"=>$_GET['key'],"seourls"=>$mybb->settings['seourls'], "bburl"=>$mybb->settings['bburl']),"topics" => array());
 while($row = $db->fetch_array($query) ) {
  	$data["topics"][] = $row;
 }
@@ -76,7 +84,22 @@ exit;
 
 
     }
+if($mybb->get_input('action') == 'twsortbyweek' && $_GET['key'])
+    {
+        
+        $isvalid= verify_post_check($_GET['key']);
 
+        header("Content-type: application/json; charset={$charset}");
+$query = $db->query("SELECT tid,fid,views,subject,lastposter,dateline FROM ".TABLE_PREFIX."threads WHERE dateline >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 7 DAY)) AND views > 1 ORDER BY views DESC LIMIT 10");
+$data = array("siteInfo"=>array("action"=>$mybb->get_input('action'),"code"=>$_GET['key'],"seourls"=>$mybb->settings['seourls'], "bburl"=>$mybb->settings['bburl']),"topics" => array());
+while($row = $db->fetch_array($query) ) {
+ 	$data["topics"][] = $row;
+}
+echo json_encode($data);
+exit;
+
+
+    }
 
 
 
@@ -267,7 +290,7 @@ function trends(){
 global $mybb, $db, $trends_widget_template;
  
 	$query1 = $db->query("SELECT * FROM ".TABLE_PREFIX."threads WHERE views > 1 ORDER BY views DESC LIMIT 10");
-	$trends_widget_template = "<style>#trends_widget img {vertical-align:middle;} #trends_widget li a {color: #333;text-decoration: underline;}#trends_widget li{float:none;display:block;border-bottom:1px solid #DDD}#trends_widget ul{height:300px;overflow-y:scroll;}#trends_widget{width:340px;margin:1% auto;max-width:100%;background-color:#fff}</style><div id='trends_widget'><h2><img src='".$mybb->settings['bburl']."/images/trendswidget/arrow.png' width='32px'>".$mybb->settings['wtitle']."</h2><p>sort by: <select onchange='TW_SORTBY(this.selectedIndex);'><option value='0'>views</option><option value='1'>today</option><option value='2'>month</option></select></p><ul id='trends_widget_list'>";
+	$trends_widget_template = "<style>#trends_widget img {vertical-align:middle;} #trends_widget li a {color: #333;text-decoration: underline;}#trends_widget li{float:none;display:block;border-bottom:1px solid #DDD}#trends_widget ul{height:300px;overflow-y:scroll;}#trends_widget{width:340px;margin:1% auto;max-width:100%;background-color:#fff}</style><div id='trends_widget'><h2><img src='".$mybb->settings['bburl']."/images/trendswidget/arrow.png' width='32px'>".$mybb->settings['wtitle']."</h2><p style='text-align:center'>sort by: <select onchange='TW_SORTBY(this.selectedIndex);'><option value='0'>views</option><option value='1'>today</option><option value='2'>week</option><option value='3'>month</option></select></p><ul id='trends_widget_list'>";
 
 	$html="";
 	if($mybb->settings['seourls'] == "yes" ){
@@ -324,7 +347,7 @@ while($result2 = $db->fetch_array($query1)){
 	}
 	/*dev mode*/
 	
-$trends_widget_template .="<hr>Created by: <a href='https://community.mybb.com/thread-220425.html'>Zain Ali - &copy; Trending Widget 2018</a></ul></div>$logdata<script type='text/javascript' src='".$mybb->settings['bburl']."/jscripts/trends_widget.js'></script>";
+$trends_widget_template .="<hr>Created by: <a href='https://community.mybb.com/thread-220425.html'>Zain Ali - &copy; Trending Widget 2018</a><p>click here for news about this plugin: <input type='button' value='get news' onclick='TW_GETNEWS();'/></p></ul></div>$logdata<script type='text/javascript' src='".$mybb->settings['bburl']."/jscripts/trends_widget.js'></script>";
 
 
 

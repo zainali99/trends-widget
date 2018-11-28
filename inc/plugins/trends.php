@@ -1,4 +1,4 @@
-<?php 
+<?php
 /* TRENDS PLUGIN
 Author: Zain Ali
 website: zainali.altervista.org
@@ -67,7 +67,7 @@ function trends_load(){
 		$query2 = $db->query("SELECT * FROM ".TABLE_PREFIX."settinggroups WHERE name ='trends_db_setting'");
 		$result3 = $db->fetch_array($query2);
 		$token_id = $result3["gid"];
-	
+
 
 	// Create Admin Tabs
 	$tabs['trends'] = array
@@ -76,7 +76,7 @@ function trends_load(){
 			'link' =>'index.php?module=config/trends',
 			'description'=> 'Sorry, this is alpha version of trends widget, so click here for setting of the plugin: <a href="index.php?module=config-settings&action=change&gid='.$token_id.'">Go To Trends Setting !</a><hr>Alpha Version - 1.0</a>'
 		);
-	
+
 
 // No action
 	if(!$mybb->input['action'])
@@ -159,7 +159,7 @@ $setting_array = array(
         'value' => 'trending', // Default
         'disporder' => 1
     ),
-   
+
 );
 
 foreach($setting_array as $name => $setting)
@@ -193,6 +193,7 @@ global $mybb, $db, $trends_widget_template;
 	$trends_widget_template = "<div id='trends_widget'><h2><img src='https://cdn2.iconfinder.com/data/icons/iconza/iconza_32x32_df086d/line_graph.png'>".$mybb->settings['wtitle']."</h2><ul>";
 	$url = "http://".$_SERVER['HTTP_HOST']."/showthread.php?tid=";
 while($result2 = $db->fetch_array($query1)){
+    $result2["subject"] = htmlspecialchars_uni($result2["subject"]);	
     $trends_widget_template .= "<li><b>+".$result2["views"]."</b> - <a href='$url".$result2["tid"]."'>".$result2["subject"]."</a></li>";
 }
 $trends_widget_template .="</ul></div><style>#trends_widget li{float:none;display:block}#trends_widget ul{position:unset}#trends_widget{width:300px;margin:1% auto;max-width:100%;min-height:150px;background-color:#fff}</style>";

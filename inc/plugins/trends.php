@@ -322,7 +322,7 @@ while($result2 = $db->fetch_array($query1)){
 	$views = $result2["views"];
 	$tid = $result2["tid"];
 	$fid = $result2["fid"];
-	$subject = $result2["subject"];
+	$subject = htmlspecialchars_uni($result2["subject"]);
 	$lastposter = $result2["lastposter"];
 	$thetime=date("d M Y",$result2["dateline"]);
 
